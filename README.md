@@ -1,64 +1,127 @@
 # dsh-archive-admin
 
-> 给 DeepSeek Harness Web 侧边栏加上"已归档会话"管理：**恢复** 或 **永久删除**。
+English | [中文](README.zh.md)
+
 > Adds archived-session management to the DSH web sidebar: **restore** or **permanently delete**.
 
-## 功能 / What it does
+---
 
-在 DSH 里归档会话后（归档只是隐藏，**不会删除**会话），这个插件让你可以：
+## ⚠️ Important: this package is **NOT published to npm yet**
+
+`npm install dsh-archive-admin` / `pnpm add dsh-archive-admin` **will fail with 404** — the package does not exist on the registry (check: `npm view dsh-archive-admin`).
+
+That is not a problem with node, npm, or pnpm — it simply means there is **nothing to download**. Because of this, the only way to install is from your **local checkout** (this repository on your disk), by linking it into DSH's module directory, then telling DSH to load it.
+
+Once the package is published, installing becomes a one-liner (`dsh plugin --profile web add dsh-archive-admin`). Until then, follow the manual steps below.
+
+---
+
+## What it does
+
 Once you archive sessions in DSH (archiving only hides them — it does not delete them), this plugin lets you:
 
-- **恢复 / Restore**：把会话从归档区移回原来的分组和位置。
-  Remove the session from the archive set; it reappears in its original workspace and position.
-- **永久删除 / Delete**：彻底删除会话的 **日志文件、投影缓存、分组占位和归档记录**。
-  Permanently remove the session's **log file, projection-cache row, workspace slot and archive record**.
+- **Restore**: remove the session from the archive set; it reappears in its original workspace and position.
+- **Delete**: permanently remove the session's **log file, projection-cache row, workspace slot and archive record**.
 
-## 安装 / Install
+## Install (while unpublished)
 
-1. 安装到 profile 的模块目录 / Install into the profile module root:
+### Step 1 — Link the local checkout into the profile module root
 
-   ```bash
-   # 已发布时 / when published:
-   npm install --prefix ~/.dsh/profiles dsh-archive-admin
+DSH looks for plugins in its module directory. We create a link there that points at your local clone, so DSH can "see" the code without needing the npm registry.
 
-   # 开发时用软链 / while developing, symlink the checkout:
-   ln -s /path/to/dsh-archive-admin ~/.dsh/profiles/node_modules/dsh-archive-admin
-   ```
+**Windows** — use a directory junction (a junction needs **no admin rights**; a symlink does):
 
-2. 在 `~/.dsh/profiles/web/cordis.patch.yml` 里追加 / Append to `~/.dsh/profiles/web/cordis.patch.yml`:
+```powershell
+New-Item -ItemType Junction `
+  -Path "$env:USERPROFILE\.dsh\profiles\node_modules\dsh-archive-admin" `
+  -Target "C:\path\to\dsh-archive-admin"
+```
 
-   ```yaml
-   - insert:
-       - id: archive-admin
-         name: 'dsh-archive-admin'
-   ```
+Prefer a plain copy instead of a link? Also fine:
 
-3. 重启 `dsh web` 并刷新页面 / Restart `dsh web`, then refresh the page.
+```powershell
+Copy-Item -Recurse "C:\path\to\dsh-archive-admin" "$env:USERPROFILE\.dsh\profiles\node_modules\dsh-archive-admin"
+```
 
-## 使用 / Usage
+**macOS / Linux** — use a symlink:
 
-侧边栏底部会出现一个「归档」按钮 / An "Archived" button appears at the bottom of the sidebar:
+```bash
+ln -s /path/to/dsh-archive-admin ~/.dsh/profiles/node_modules/dsh-archive-admin
+```
 
-- 点击打开「已归档会话」弹窗：多选框 + 全选，列表可滚动 / it opens the "Archived sessions" dialog: checkbox multi-select + select-all, scrollable list;
-- **恢复 (n)**：把选中的会话恢复回原分组 / restores the selected sessions;
-- **删除 (n)**：二次确认后永久删除选中会话 / permanently deletes the selection after a confirmation dialog.
+> A link stays "live": edits you make to the local clone are immediately visible to DSH (no re-copy needed). A copy is simpler to reason about but goes stale as soon as you edit the source.
 
-> **注意 / Note**：删除时若某会话仍驻留在服务器内存中（例如归档后没有关闭），插件会先删掉它的日志，并在弹窗里提示"重启 dsh web 后彻底消失"。这是 DSH 没有对外提供"内存销毁会话"API 的边界——重启后即完全消失，属预期行为。
-> If a deleted session is still loaded in server memory (e.g. it was archived without being closed), the plugin deletes its log and tells you to restart `dsh web` for it to fully disappear. DSH exposes no in-memory dispose API, so a restart clears it — this is expected.
+### Step 2 — Tell DSH to load the plugin
 
-## 卸载 / Uninstall
+Append this to `~/.dsh/profiles/web/cordis.patch.yml` (`%USERPROFILE%\.dsh\profiles\web\cordis.patch.yml` on Windows):
 
-1. 从 `cordis.patch.yml` 里删除上面的 `insert` 块 / Remove the `insert` block from `cordis.patch.yml`;
-2. `rm -rf ~/.dsh/profiles/node_modules/dsh-archive-admin`;
-3. 重启 `dsh web` / Restart `dsh web`.
+```yaml
+- insert:
+    - id: archive-admin
+      name: 'dsh-archive-admin'
+```
 
-插件不写任何自有持久化状态，卸载后 DSH 里零残留。
+- `id: archive-admin` → the plugin's internal id (matches the plugin source).
+- `name: 'dsh-archive-admin'` → the package to load — the very one you just linked in Step 1.
+
+### Step 3 — Restart `dsh web` and hard-refresh the page
+
+```bash
+dsh web
+```
+
+Then hard-refresh the browser tab (**Ctrl+Shift+R**) so the boot graph picks up the new client bundle. An "Archived" button appears at the bottom of the sidebar.
+
+> **Why not `dsh plugin --profile web add ...`?** That command downloads from the npm registry, which fails for an unpublished package. The manual two steps above need **no pnpm** and **no npm registry**.
+
+## Usage
+
+An "Archived" button appears at the bottom of the sidebar:
+
+- Click it to open the "Archived sessions" dialog: checkbox multi-select + select-all, scrollable list;
+- **Restore (n)**: restores the selected sessions;
+- **Delete (n)**: permanently deletes the selection after a confirmation dialog.
+
+> **Note**: if a deleted session is still loaded in server memory (e.g. it was archived without being closed), the plugin deletes its log and tells you to restart `dsh web` for it to fully disappear. DSH exposes no in-memory dispose API, so a restart clears it — this is expected.
+
+## Uninstall
+
+**Order matters.** Remove the loading config **first**, then the linked package. If you delete the link first while `cordis.patch.yml` still tells DSH to load it, DSH will fail to start looking for a package that no longer exists.
+
+### Step 1 — Remove the loading config
+
+Delete the `insert` block you added from `~/.dsh/profiles/web/cordis.patch.yml` (revert it to `[]`).
+
+### Step 2 — Remove the linked package
+
+**Windows**
+
+```powershell
+Remove-Item "$env:USERPROFILE\.dsh\profiles\node_modules\dsh-archive-admin" -Recurse -Force
+```
+
+**macOS / Linux**
+
+```bash
+rm -rf ~/.dsh/profiles/node_modules/dsh-archive-admin
+```
+
+### Step 3 — Restart `dsh web`
+
 The plugin writes no persistent state of its own — after uninstall nothing is left behind.
 
-## 兼容性 / Compatibility
+## Development
 
-- 构建于 DSH `0.1.0-rc.7` / Built against DSH `0.1.0-rc.7`.
-- **不修改**任何 `@deepseek-ai/dsh-*` 源文件；唯一与版本耦合的部分是启动时给 workspace registry 补一个缺失的 `unarchiveSession` 方法，版本不兼容时会直接报错而不是静默失效。 / Modifies **no** `@deepseek-ai/dsh-*` package; the only version-coupled part is a runtime patch that adds the missing `unarchiveSession` method to the workspace registry at startup, and it fails loudly instead of misbehaving on an incompatible version.
+Run the offline tests (no DSH server needed):
+
+```bash
+npm test
+```
+
+## Compatibility
+
+- Built against DSH `0.1.0-rc.7`.
+- Modifies **no** `@deepseek-ai/dsh-*` package; the only version-coupled part is a runtime patch that adds the missing `unarchiveSession` method to the workspace registry at startup, and it fails loudly instead of misbehaving on an incompatible version.
 
 ## License
 
