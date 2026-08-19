@@ -4,6 +4,8 @@
 // request-trust gate). Run with `node test/host.test.mjs`.
 import { apply, name, inject } from "../lib/index.js";
 import { mkdir, writeFile, rm as fsRm, access } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 let failures = 0;
 const assert = (cond, msg) => {
@@ -11,7 +13,8 @@ const assert = (cond, msg) => {
 	else { failures += 1; console.error("  FAIL", msg); }
 };
 
-const ROOT = "/tmp/dsh-archive-admin-test";
+// Use the OS temp dir instead of a hard-coded Unix /tmp path (Windows-compatible).
+const ROOT = join(tmpdir(), "dsh-archive-admin-test");
 
 // --- fake workspace registry (mirrors stock dsh-workspace instance shape) ---
 const workspaceEntity = {
